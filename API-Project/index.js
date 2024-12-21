@@ -148,6 +148,99 @@ app.get('/api/shorturl/:shorturl', (req, res) => {
 //url shortener
 
 
+/* ADD EXERCISE */
+// In-memory database to store users and exercises
+let users = [];
+let exercises = [];
+
+// POST endpoint to create a shortened URL
+app.post('/api/users', (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'Username is required' });
+
+  const existingUser = users.find(user => user.username === username);
+  if (existingUser) {
+    return res.status(400).json({ error: 'Username already exists', _id: existingUser._id });
+  }  
+  const newUser = {
+    username,
+    _id: Math.random().toString(36).substring(7) // Generate a random ID
+  };
+  users.push(newUser);
+  res.json(newUser);
+});
+
+// Endpoint to add exercises for a user
+app.post('/api/users/:_id/exercises', (req, res) => {
+  const { _id } = req.params;
+  const { description, duration, date } = req.body;
+
+  const user = users.find(user => user._id === _id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  if (!description || !duration) {
+    return res.status(400).json({ error: 'Description and duration are required' });
+  }
+
+  const exercise = {
+    _id,
+    username: user.username,
+    description,
+    duration: parseInt(duration),
+    date: date ? new Date(date).toDateString() : new Date().toDateString()
+  };
+
+  exercises.push(exercise);
+  res.json(exercise);
+});
+
+
+// Endpoint to retrieve user exercise logs
+app.get('/api/users/:_id/logs', (req, res) => {
+  const { _id } = req.params;
+  const { from, to, limit } = req.query;
+
+  const user = users.find(user => user._id === _id);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  let userExercises = exercises.filter(ex => ex._id === _id);
+
+  if (from) {
+    const fromDate = new Date(from);
+    userExercises = userExercises.filter(ex => new Date(ex.date) >= fromDate);
+  }
+
+  if (to) {
+    const toDate = new Date(to);
+    userExercises = userExercises.filter(ex => new Date(ex.date) <= toDate);
+  }
+
+  if (limit) {
+    userExercises = userExercises.slice(0, parseInt(limit));
+  }
+
+  res.json({
+    username: user.username,
+    count: userExercises.length,
+    _id: user._id,
+    log: userExercises.map(({ description, duration, date }) => ({
+      description,
+      duration,
+      date
+    }))
+  });
+});
+
+// Endpoint to get a list of all users
+app.get('/api/users', (req, res) => {
+  const userList = users.map(user => ({
+    username: user.username,
+    _id: user._id
+  }));
+  res.json(userList);
+});
+/* ADD EXERCISE */
+
 // Listen on port set in environment variable or default to 3000
 var listener = app.listen(process.env.PORT || 3000, function () {
   console.log('Your app is listening on port ' + listener.address().port);
