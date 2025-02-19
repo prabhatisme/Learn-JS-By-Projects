@@ -7,40 +7,63 @@ module.exports = function (app) {
 
   app.route("/api/check").post((req, res) => {
     const { puzzle, coordinate, value } = req.body;
+    
+    // Check if any required fields are missing
     if (!puzzle || !coordinate || !value) {
-      res.json({ error: "Required field(s) missing" });
-      return;
+      return res.json({ error: "Required field(s) missing" });
     }
-    const row = coordinate.split("")[0];
-    const column = coordinate.split("")[1];
-    if (
-      coordinate.length !== 2 ||
-      !/[a-i]/i.test(row) ||
-      !/[1-9]/i.test(column)
-    ) {
-      console.log("invalid coordinate :>> ");
-      res.json({ error: "Invalid coordinate" });
-      return;
+    
+    // Check puzzle length
+    if (puzzle.length !== 81) {
+      return res.json({ error: "Expected puzzle to be 81 characters long" });
     }
-    if (!/[1-9]/i.test(value)) {
-      res.json({ error: "Invalid value" });
-      return;
-    }
-    if (puzzle.length != 81) {
-      res.json({ error: "Expected puzzle to be 81 characters long" });
-      return;
-    }
+    
+    // Check for invalid characters in puzzle
     if (/[^0-9.]/g.test(puzzle)) {
-      res.json({ error: "Invalid characters in puzzle" });
-      return;
+      return res.json({ error: "Invalid characters in puzzle" });
     }
+    
+    // Validate coordinate format
+    if (coordinate.length !== 2) {
+      return res.json({ error: "Invalid coordinate" });
+    }
+    
+    const row = coordinate[0];
+    const column = coordinate[1];
+    
+    // Check if row is a letter from A to I (case insensitive)
+    if (!/^[a-i]$/i.test(row)) {
+      return res.json({ error: "Invalid coordinate" });
+    }
+    
+    // Check if column is a number from 1 to 9
+    if (!/^[1-9]$/.test(column)) {
+      return res.json({ error: "Invalid coordinate" });
+    }
+    
+    // Check if value is a number from 1 to 9
+    if (!/^[1-9]$/.test(value)) {
+      return res.json({ error: "Invalid value" });
+    }
+    
+    // Check if the value is already placed at that coordinate
+    const rowIndex = row.toUpperCase().charCodeAt(0) - 65; // A=0, B=1, ..., I=8
+    const colIndex = parseInt(column) - 1;
+    const index = rowIndex * 9 + colIndex;
+    
+    if (puzzle[index] === value) {
+      return res.json({ valid: true });
+    }
+    
+    // Validate placement
     let validCol = solver.checkColPlacement(puzzle, row, column, value);
-    let validReg = solver.checkRegionPlacement(puzzle, row, column, value);
     let validRow = solver.checkRowPlacement(puzzle, row, column, value);
-    let conflicts = [];
-    if (validCol && validReg && validRow) {
-      res.json({ valid: true });
+    let validReg = solver.checkRegionPlacement(puzzle, row, column, value);
+    
+    if (validCol && validRow && validReg) {
+      return res.json({ valid: true });
     } else {
+      let conflicts = [];
       if (!validRow) {
         conflicts.push("row");
       }
@@ -50,29 +73,33 @@ module.exports = function (app) {
       if (!validReg) {
         conflicts.push("region");
       }
-      res.json({ valid: false, conflict: conflicts });
+      return res.json({ valid: false, conflict: conflicts });
     }
   });
 
   app.route("/api/solve").post((req, res) => {
     const { puzzle } = req.body;
+    
+    // Check if puzzle is missing
     if (!puzzle) {
-      res.json({ error: "Required field missing" });
-      return;
+      return res.json({ error: "Required field missing" });
     }
-    if (puzzle.length != 81) {
-      res.json({ error: "Expected puzzle to be 81 characters long" });
-      return;
+    
+    // Check puzzle length
+    if (puzzle.length !== 81) {
+      return res.json({ error: "Expected puzzle to be 81 characters long" });
     }
+    
+    // Check for invalid characters in puzzle
     if (/[^0-9.]/g.test(puzzle)) {
-      res.json({ error: "Invalid characters in puzzle" });
-      return;
+      return res.json({ error: "Invalid characters in puzzle" });
     }
+    
     let solvedString = solver.solve(puzzle);
     if (!solvedString) {
-      res.json({ error: "Puzzle cannot be solved" });
+      return res.json({ error: "Puzzle cannot be solved" });
     } else {
-      res.json({ solution: solvedString });
+      return res.json({ solution: solvedString });
     }
   });
 };
