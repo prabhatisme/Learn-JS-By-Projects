@@ -4,19 +4,25 @@ var app = express();
 var cors = require('cors');
 const bodyParser = require('body-parser');
 
+const multer = require("multer"); //for file-metdate-services
+const path = require("path"); //for file-metdate-services
+
 // enable CORS (https://en.wikipedia.org/wiki/Cross-origin_resource_sharing)
 // so that your API is remotely testable by FCC 
 
+app.use(cors())
 app.use(cors({optionsSuccessStatus: 200}));  // some legacy browsers choke on 204
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 // http://expressjs.com/en/starter/static-files.html
-app.use('/public', express.static(`${process.cwd()}/public`));
+// app.use('/public', express.static(`${process.cwd()}/public`));
+app.use(express.static('public')) //can do this way too 
 
 // http://expressjs.com/en/starter/basic-routing.html
 app.get("/", function (req, res) {
   res.sendFile(__dirname + '/views/index.html');
+  // res.sendFile(process.cwd() + '/views/index.html'); //also can do this way
 });
 
 
@@ -28,32 +34,6 @@ app.get("/api/hello", function (req, res) {
 app.get('/api/shorturl/3', function(req, res) {
   res.send("https://forum.freecodecamp.org/");
 });
-
-/*
-app.get("/api/:dateParam", function(req, res) {
-
-  let dateParam = req.params.dateParam;
-
-  if (/^\d{5,}$/.test(dateParam))
-    dateParam = parseInt(dateParam);
-    
-  const date = new Date(dateParam);
-
-  if (date.toString() == "Invalid Date") {
-
-    res.json({
-      "error": "Invalid Date"
-    });
-
-  } else {
-
-    res.json({
-      "unix": date.valueOf(),
-      "utc": date.toUTCString()
-    });
-
-  }
-}); */
 
 app.get("/api/:date?", (req, res) => {
   const dateParam = req.params.date;
@@ -78,10 +58,17 @@ app.get("/api/:date?", (req, res) => {
     return res.json({ error: "Invalid Date" });
   }
 
+  function getISTTimeString() {
+    // let now = new Date(); // Get current UTC time
+    let istOffset = 5.5 * 60 * 60 * 1000; // IST is UTC+5:30 in milliseconds
+    let istTime = new Date(date.getTime() + istOffset); // Convert to IST
+    return istTime.toUTCString().replace("GMT", "IST"); // Format similar to UTCString
+  }
+
   // Return JSON response
   res.json({
     unix: date.getTime(),
-    utc: date.toUTCString(),
+    utc: getISTTimeString()
   });
 });
 
@@ -90,9 +77,10 @@ app.get("/api/:date?", (req, res) => {
 //whoami api
 app.get("/api/whoami", (req, res) => {
   const ip = req.socket.localAddress;
+  const ip2 = req.ip; // client’s public IP
   const language = req.headers['accept-language'];
   const software = req.headers['user-agent'];
-  console.log(ip);
+  console.log(ip2);
   res.json({
     ipaddress: ip,
     language: language,
@@ -241,7 +229,31 @@ app.get('/api/users', (req, res) => {
 });
 /* ADD EXERCISE */
 
+/* File Metadata Service */
+const upload = multer({
+  storage: multer.memoryStorage(), // Store file in memory buffer
+  limits: { fileSize: 5 * 1024 * 1024 }, // Set file size limit (5MB)
+});
+
+// Handle file upload
+app.post("/api-project/api/fileanalyse", upload.single("upfile"), (req, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: "No file uploaded" });
+  }
+
+  const fileMetadata = {
+    name: req.file.originalname,
+    type: req.file.mimetype,
+    size: req.file.size,
+  };
+
+  res.json(fileMetadata);
+});
+
+
+
 // Listen on port set in environment variable or default to 3000
-var listener = app.listen(process.env.PORT || 3000, function () {
-  console.log('Your app is listening on port ' + listener.address().port);
+let PORT = process.env.PORT || 3000;
+var listener = app.listen(PORT, function () {
+  console.log(`Your app is listening on port + ${PORT}`);
 });

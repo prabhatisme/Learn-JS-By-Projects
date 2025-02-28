@@ -1,8 +1,9 @@
 //bash: npm install mongoose
 const mongoose = require('mongoose');
 
+const MONGO_URI = 'mongodb+srv://fcc_user:fcc_user@cluster0.5tcgm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
 // Connect to MongoDB (replace 'your_connection_string' with your MongoDB URI)
-mongoose.connect('your_connection_string', { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => console.error('Error connecting to MongoDB:', err));
 
@@ -93,3 +94,4 @@ app.get('/api/shorturl/:shorturl', async (req, res) => {
     "short_url": 1,
     "__v": 0
   }*/
+
