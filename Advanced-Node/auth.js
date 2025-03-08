@@ -5,7 +5,7 @@ const { ObjectID } = require('mongodb');
 const GitHubStrategy = require('passport-github').Strategy;
 
 module.exports = function (app, myDataBase) {
-  passport.serializeUser((user, done) => {
+  passport.serializeUser((user, done) => { 'mongodb+srv://fcc_user:fcc_user@cluster0.5tcgm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
       done(null, user._id);
   });
   passport.deserializeUser((id, done) => {
